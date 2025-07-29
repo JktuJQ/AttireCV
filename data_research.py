@@ -1,7 +1,6 @@
 """`data` module provides basic research on the dataset."""
 
 import os
-
 import typing as t
 from enum import StrEnum
 from collections import Counter
@@ -21,6 +20,21 @@ class ImageType(StrEnum):
                 return "blouse"
             case ImageType.TROUSERS:
                 return "trousers"
+
+    @classmethod
+    def of_file(cls, file: str):
+        """Extracts type of image from the file name."""
+
+        return cls(os.path.splitext(file)[0].split("_")[1].lower())
+
+    def label(self) -> int:
+        """Returns label that is assigned to this image type."""
+
+        match self:
+            case ImageType.BLOUSE:
+                return 0
+            case ImageType.TROUSERS:
+                return 1
 
 
 DATA_FOLDER_PATH: str = os.path.join("lamoda-images-classification", "images")
@@ -65,7 +79,7 @@ class DataFolder(StrEnum):
 
         if self == DataFolder.TEST:
             return None
-        return Counter([ImageType(os.path.splitext(file)[0].split("_")[1].lower()) for file in self.files()])
+        return Counter([ImageType.of_file(file) for file in self.files()])
 
     def image_sizes(self) -> Counter[(int, int)]:
         """Returns `Counter` of sizes of all images. This function does not handle cases where file is not an image."""
