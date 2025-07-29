@@ -29,24 +29,24 @@ class TrainingDataset(Dataset):
         with Image.open(os.path.join(DataFolder.TRAIN, file)) as image:
             image = image.convert("RGB")
             image_tensor = self.transform(image)
-        return image_tensor, ImageType.of_file(file)
+        return image_tensor, ImageType.of_file(file).label()
 
     @staticmethod
-    def split(train_transform, val_transform, val_size: float) -> (Dataset, Dataset):
-        """Splits training data to obtain data specifically for training and data for validation."""
+    def split(fit_transform, val_transform, val_size: float) -> (Dataset, Dataset):
+        """Splits fitting data to obtain data specifically for fitting and data for validation."""
 
         dataset = TrainingDataset(None)
 
-        train_indices, val_indices = train_test_split(
+        fit_indices, val_indices = train_test_split(
             list(range(len(dataset))),
             test_size=val_size,
             stratify=[ImageType.of_file(file) for file in dataset.FILES],
             random_state=42
         )
 
-        train_dataset = Subset(TrainingDataset(train_transform), train_indices)
+        fit_dataset = Subset(TrainingDataset(fit_transform), fit_indices)
         val_dataset = Subset(TrainingDataset(val_transform), val_indices)
-        return train_dataset, val_dataset
+        return fit_dataset, val_dataset
 
 
 IMAGENET_MEAN_AND_STD = np.array([0.485, 0.456, 0.406]), np.array([0.229, 0.224, 0.225])
@@ -72,17 +72,17 @@ VAL_TRANSFORM = transforms.Compose([
 ])
 
 VAL_SIZE = 0.2
-TRAIN_DATASET, VAL_DATASET = TrainingDataset.split(TRAIN_TRANSFORM, VAL_TRANSFORM, VAL_SIZE)
+FIT_DATASET, VAL_DATASET = TrainingDataset.split(TRAIN_TRANSFORM, VAL_TRANSFORM, VAL_SIZE)
 
 BATCH_SIZE = 64
-TRAIN_LOADER = DataLoader(
-    TRAIN_DATASET,
+FIT_DATALOADER = DataLoader(
+    FIT_DATASET,
     batch_size=BATCH_SIZE,
     shuffle=True,
     num_workers=2,
     pin_memory=True
 )
-VAL_LOADER = DataLoader(
+VAL_DATALOADER = DataLoader(
     VAL_DATASET,
     batch_size=BATCH_SIZE,
     shuffle=False,
@@ -108,6 +108,6 @@ if __name__ == "__main__":
         plt.show()
 
 
-    data = iter(TRAIN_LOADER)
+    data = iter(FIT_DATALOADER)
     show_images(next(data)[0], denormalize=True)
     show_images(next(data)[0], denormalize=True)
