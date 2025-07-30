@@ -1,3 +1,5 @@
+"""`models` module provides several pre-trained CV models that could be used for the task."""
+
 import os
 
 from tqdm import tqdm
@@ -13,13 +15,27 @@ MODELS_PATH = "models"
 class CVModel(nn.Module):
     """`CVModel` is an abstract class that provides fitting and validation of models."""
 
-    def __init__(self, name: str, model):
+    def __init__(self, model):
         super().__init__()
-        self.name = name
         self.model = model
 
-    def save(self):
-        torch.save(self.model.state_dict(), os.path.join(MODELS_PATH, self.name) + ".pth")
+    def forward(self, x):
+        return self.model(x)
+
+    @classmethod
+    def load(cls, file: str):
+        """Loads model from the file."""
+
+        model = cls()
+        model.model.load_state_dict(
+            torch.load(os.path.join(MODELS_PATH, file) + ".pth", map_location=torch.device("cpu"))
+        )
+        return model
+
+    def save(self, file: str):
+        """Saves model to the file."""
+
+        torch.save(self.model.state_dict(), os.path.join(MODELS_PATH, file) + ".pth")
 
     def fit_one_epoch(self, optimizer, lr_scheduler, loss_fn, dataloader, device):
         """Fits model using given data, optimizer, loss function for one epoch. Returns loss and accuracy on epoch."""
@@ -105,25 +121,23 @@ class EfficientNet(CVModel):
     def __init__(self):
         model = models.efficientnet_b0(pretrained=True)
         model.classifier[1] = nn.Linear(model.classifier[1].in_features, 2)
-        super().__init__("efficientnet_b0", model)
-
-    def forward(self, x):
-        return self.model(x)
+        super().__init__(model)
 
 
 if __name__ == "__main__":
-    from dataset import FIT_DATALOADER, VAL_DATALOADER
+    from datasets import FIT_DATALOADER, VAL_DATALOADER
 
     model = EfficientNet()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+    model.model.to(device)
 
     optimizer = optim.AdamW(model.parameters(), lr=0.01)
     lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, 0.8)
     loss_fn = nn.CrossEntropyLoss()
 
-    epochs = 1
+    epochs = 5
 
     print(model.fit_and_val(epochs, optimizer, lr_scheduler, loss_fn, FIT_DATALOADER, VAL_DATALOADER, device))
-
+    model.save("efficientnet_b0")
+    model.save("best")

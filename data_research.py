@@ -1,4 +1,4 @@
-"""`data` module provides basic research on the dataset."""
+"""`data_research` module provides basic research on the dataset."""
 
 import os
 import typing as t
@@ -35,6 +35,16 @@ class ImageType(StrEnum):
                 return 0
             case ImageType.TROUSERS:
                 return 1
+    
+    @classmethod
+    def of_label(cls, label: int):
+        """Extracts type of image from it's label."""
+
+        match label:
+            case 0:
+                return cls.BLOUSE
+            case 1:
+                return cls.TROUSERS
 
 
 DATA_FOLDER_PATH: str = os.path.join("lamoda-images-classification", "images")
