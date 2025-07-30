@@ -1,6 +1,6 @@
 import os
 
-from torch.utils.data import Dataset, Subset, DataLoader
+import torch.utils.data as data
 import torchvision.transforms as transforms
 
 import numpy as np
@@ -11,46 +11,33 @@ from PIL import Image
 
 from data_research import DataFolder, ImageType
 
+BATCH_SIZE = 64
+IMAGENET_MEAN_AND_STD = np.array([0.485, 0.456, 0.406]), np.array([0.229, 0.224, 0.225])
 
-class TrainingDataset(Dataset):
-    """`TrainingDataset` allows performing transforms to images beforehand."""
 
-    FILES = DataFolder.TRAIN.files()
+class Dataset(data.Dataset):
+    """`Dataset` performs transforms to images beforehand."""
 
-    def __init__(self, transform):
+    PATH = ""
+    FILES = []
+
+    def __init__(self, transform, label_maker):
         super().__init__()
         self.transform = transform
+        self.label_maker = label_maker
 
     def __len__(self):
-        return len(TrainingDataset.FILES)
+        return len(self.FILES)
 
     def __getitem__(self, index):
-        file = TrainingDataset.FILES[index]
-        with Image.open(os.path.join(DataFolder.TRAIN, file)) as image:
+        file = self.FILES[index]
+        with Image.open(os.path.join(self.PATH, file)) as image:
             image = image.convert("RGB")
             image_tensor = self.transform(image)
-        return image_tensor, ImageType.of_file(file).label()
-
-    @staticmethod
-    def split(fit_transform, val_transform, val_size: float) -> (Dataset, Dataset):
-        """Splits fitting data to obtain data specifically for fitting and data for validation."""
-
-        dataset = TrainingDataset(None)
-
-        fit_indices, val_indices = train_test_split(
-            list(range(len(dataset))),
-            test_size=val_size,
-            stratify=[ImageType.of_file(file) for file in dataset.FILES],
-            random_state=42
-        )
-
-        fit_dataset = Subset(TrainingDataset(fit_transform), fit_indices)
-        val_dataset = Subset(TrainingDataset(val_transform), val_indices)
-        return fit_dataset, val_dataset
+        return image_tensor, self.label_maker(file)
 
 
-IMAGENET_MEAN_AND_STD = np.array([0.485, 0.456, 0.406]), np.array([0.229, 0.224, 0.225])
-TRAIN_TRANSFORM = transforms.Compose([
+FIT_TRANSFORM = transforms.Compose([
     transforms.Resize((256, 256)),
     transforms.CenterCrop(224),
 
@@ -71,22 +58,74 @@ VAL_TRANSFORM = transforms.Compose([
     transforms.Normalize(*IMAGENET_MEAN_AND_STD)
 ])
 
-VAL_SIZE = 0.2
-FIT_DATASET, VAL_DATASET = TrainingDataset.split(TRAIN_TRANSFORM, VAL_TRANSFORM, VAL_SIZE)
 
-BATCH_SIZE = 64
-FIT_DATALOADER = DataLoader(
+class TrainingDataset(Dataset):
+    """`TrainingDataset` performs transforms to training images beforehand."""
+
+    PATH = str(DataFolder.TRAIN)
+    FILES = DataFolder.TRAIN.files()
+
+    def __init__(self, transform):
+        super().__init__(transform, lambda file: ImageType.of_file(file).label())
+
+    @staticmethod
+    def split(fit_transform, val_transform, val_size: float) -> (Dataset, Dataset):
+        """Splits fitting data to obtain data specifically for fitting and data for validation."""
+
+        dataset = TrainingDataset(lambda x: x)
+
+        fit_indices, val_indices = train_test_split(
+            list(range(len(dataset))),
+            test_size=val_size,
+            stratify=[ImageType.of_file(file) for file in dataset.FILES],
+            random_state=42
+        )
+
+        fit_dataset = data.Subset(TrainingDataset(fit_transform), fit_indices)
+        val_dataset = data.Subset(TrainingDataset(val_transform), val_indices)
+        return fit_dataset, val_dataset
+
+
+VAL_SIZE = 0.2
+FIT_DATASET, VAL_DATASET = TrainingDataset.split(FIT_TRANSFORM, VAL_TRANSFORM, VAL_SIZE)
+
+FIT_DATALOADER = data.DataLoader(
     FIT_DATASET,
     batch_size=BATCH_SIZE,
     shuffle=True,
-    num_workers=2,
     pin_memory=True
 )
-VAL_DATALOADER = DataLoader(
+VAL_DATALOADER = data.DataLoader(
     VAL_DATASET,
     batch_size=BATCH_SIZE,
     shuffle=False,
-    num_workers=2
+)
+
+TEST_TRANSFORM = transforms.Compose([
+    transforms.Resize((256, 256)),
+    transforms.CenterCrop(224),
+
+    transforms.ToTensor(),
+
+    transforms.Normalize(*IMAGENET_MEAN_AND_STD)
+])
+
+
+class TestingDataset(Dataset):
+    """`TestingDataset` performing transforms to testing images beforehand."""
+
+    PATH = str(DataFolder.TEST)
+    FILES = sorted(DataFolder.TEST.files())
+
+    def __init__(self):
+        super().__init__(TEST_TRANSFORM, lambda x: x)
+
+
+TEST_DATASET = TestingDataset()
+TEST_DATALOADER = data.DataLoader(
+    TEST_DATASET,
+    batch_size=BATCH_SIZE,
+    shuffle=False,
 )
 
 if __name__ == "__main__":
@@ -108,6 +147,9 @@ if __name__ == "__main__":
         plt.show()
 
 
-    data = iter(FIT_DATALOADER)
-    show_images(next(data)[0], denormalize=True)
-    show_images(next(data)[0], denormalize=True)
+    fit_data = iter(FIT_DATALOADER)
+    show_images(next(fit_data)[0], denormalize=True)
+
+    test_data = iter(TEST_DATALOADER)
+    show_images(next(test_data)[0], denormalize=True)
+  

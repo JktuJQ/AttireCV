@@ -1,3 +1,5 @@
+import os
+
 from tqdm import tqdm
 
 import torch
@@ -5,16 +7,19 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.models as models
 
+MODELS_PATH = "models"
+
 
 class CVModel(nn.Module):
     """`CVModel` is an abstract class that provides fitting and validation of models."""
 
-    def __init__(self, model):
+    def __init__(self, name: str, model):
         super().__init__()
+        self.name = name
         self.model = model
 
-    def save(self, filename: str):
-        torch.save(self.model.state_dict(), filename)
+    def save(self):
+        torch.save(self.model.state_dict(), os.path.join(MODELS_PATH, self.name) + ".pth")
 
     def fit_one_epoch(self, optimizer, lr_scheduler, loss_fn, dataloader, device):
         """Fits model using given data, optimizer, loss function for one epoch. Returns loss and accuracy on epoch."""
@@ -95,12 +100,12 @@ class CVModel(nn.Module):
 
 
 class EfficientNet(CVModel):
-    """EfficientNet v2 (small) model."""
+    """EfficientNet B0 model."""
 
     def __init__(self):
         model = models.efficientnet_b0(pretrained=True)
         model.classifier[1] = nn.Linear(model.classifier[1].in_features, 2)
-        super().__init__(model)
+        super().__init__("efficientnet_b0", model)
 
     def forward(self, x):
         return self.model(x)
@@ -118,6 +123,7 @@ if __name__ == "__main__":
     lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, 0.8)
     loss_fn = nn.CrossEntropyLoss()
 
-    epochs = 10
+    epochs = 1
 
-    model.fit_and_val(epochs, optimizer, lr_scheduler, loss_fn, FIT_DATALOADER, VAL_DATALOADER, device)
+    print(model.fit_and_val(epochs, optimizer, lr_scheduler, loss_fn, FIT_DATALOADER, VAL_DATALOADER, device))
+
