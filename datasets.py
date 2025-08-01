@@ -114,7 +114,7 @@ TEST_TRANSFORM = transforms.Compose([
 
 
 class TestingDataset(Dataset):
-    """`TestingDataset` performing transforms to testing images beforehand."""
+    """`TestingDataset` performs transforms to testing images beforehand."""
 
     PATH = str(DataFolder.TEST)
     FILES = sorted(DataFolder.TEST.files())

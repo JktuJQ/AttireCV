@@ -9,33 +9,36 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.models as models
 
-MODELS_PATH = "models"
-
 
 class CVModel(nn.Module):
     """`CVModel` is an abstract class that provides fitting and validation of models."""
 
-    def __init__(self, model):
+    MODELS_PATH = "models"
+
+    def __init__(self, name, model):
         super().__init__()
+        self.name = name
         self.model = model
 
     def forward(self, x):
         return self.model(x)
 
     @classmethod
-    def load(cls, file: str):
+    def load(cls, file: str = None):
         """Loads model from the file."""
 
         model = cls()
         model.model.load_state_dict(
-            torch.load(os.path.join(MODELS_PATH, file) + ".pth", map_location=torch.device("cpu"))
+            torch.load(os.path.join(model.MODELS_PATH, model.name if file is None else file) + ".pth",
+                       map_location=torch.device("cpu"))
         )
         return model
 
-    def save(self, file: str):
+    def save(self, file: str = None):
         """Saves model to the file."""
 
-        torch.save(self.model.state_dict(), os.path.join(MODELS_PATH, file) + ".pth")
+        torch.save(self.model.state_dict(),
+                   os.path.join(self.MODELS_PATH, self.name if file is None else file) + ".pth")
 
     def fit_one_epoch(self, optimizer, lr_scheduler, loss_fn, dataloader, device):
         """Fits model using given data, optimizer, loss function for one epoch. Returns loss and accuracy on epoch."""
@@ -121,13 +124,31 @@ class EfficientNet(CVModel):
     def __init__(self):
         model = models.efficientnet_b0(pretrained=True)
         model.classifier[1] = nn.Linear(model.classifier[1].in_features, 2)
-        super().__init__(model)
+        super().__init__("efficientnetb0", model)
+
+
+class ResNet18(CVModel):
+    """ResNet18 model."""
+
+    def __init__(self):
+        model = models.resnet18(pretrained=True)
+        model.fc = nn.Linear(model.fc.in_features, 2)
+        super().__init__("resnet18", model)
+
+
+class ResNet34(CVModel):
+    """ResNet34 model."""
+
+    def __init__(self):
+        model = models.resnet34(pretrained=True)
+        model.fc = nn.Linear(model.fc.in_features, 2)
+        super().__init__("resnet34", model)
 
 
 if __name__ == "__main__":
     from datasets import FIT_DATALOADER, VAL_DATALOADER
 
-    model = EfficientNet()
+    model = ResNet34()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.model.to(device)
@@ -139,5 +160,4 @@ if __name__ == "__main__":
     epochs = 5
 
     print(model.fit_and_val(epochs, optimizer, lr_scheduler, loss_fn, FIT_DATALOADER, VAL_DATALOADER, device))
-    model.save("efficientnet_b0")
-    model.save("best")
+    model.save()
