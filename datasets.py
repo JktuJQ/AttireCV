@@ -68,7 +68,7 @@ class TrainingDataset(Dataset):
     FILES = DataFolder.TRAIN.files()
 
     def __init__(self, transform):
-        super().__init__(transform, lambda file: ImageType.of_file(file).label())
+        super().__init__(transform, lambda file: ImageType.from_file(file).label())
 
     @staticmethod
     def split(fit_transform, val_transform, val_size: float) -> (Dataset, Dataset):
@@ -79,7 +79,7 @@ class TrainingDataset(Dataset):
         fit_indices, val_indices = train_test_split(
             list(range(len(dataset))),
             test_size=val_size,
-            stratify=[ImageType.of_file(file) for file in dataset.FILES],
+            stratify=[ImageType.from_file(file) for file in dataset.FILES],
             random_state=42
         )
 

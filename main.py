@@ -26,7 +26,7 @@ def submission(model, device):
             outputs = model.forward(images)
             _, prediction = torch.max(outputs, 1)
 
-            predictions.extend(map(lambda label: str(ImageType.of_label(label)), prediction.cpu().numpy()))
+            predictions.extend(map(lambda label: repr(ImageType.from_label(label)), prediction.cpu().numpy()))
     test_df = pd.DataFrame({
         "index": datasets.TEST_DATASET.FILES,
         "label": predictions
@@ -55,7 +55,7 @@ def main():
     while True:
         print()
         model_id = int(input(
-            """`GarmentCV` offers 3 models for blouses vs trousers detection:
+            """`GarmentCV` offers 3 models for blouses/trousers detection:
         `EfficientNetB0` ('1')
         `ResNet18` ('2')
         `ResNet34` ('3')\n"""))
@@ -106,22 +106,17 @@ def main():
                 outputs = model.forward(images)
                 _, prediction = torch.max(outputs, 1)
 
-            predictions.extend(map(lambda label: repr(ImageType.of_label(label)), prediction.cpu().numpy()))
+            predictions.extend(map(lambda label: str(ImageType.from_label(label)), prediction.cpu().numpy()))
         df = pd.DataFrame({
             "index": application_dataset.FILES,
             "label": predictions
         })
         print(df)
 
-        save_to_file = int(
-            input("Enter whether you want to save results to a 'results.csv' file ('1') or not ('2')?\n"))
-        if save_to_file == 1:
-            df.to_csv("results.csv", index=False)
-        elif save_to_file == 2:
-            continue
-        else:
-            print("Wrong input - there is no option with code " + str(save_to_file))
-            continue
+        save_to_file = input(
+            "Enter the name of the csv file to which the results would be saved or nothing to skip saving:\n")
+        if save_to_file != "":
+            df.to_csv(f"{save_to_file}.csv", index=False)
 
 
 if __name__ == "__main__":

@@ -11,21 +11,31 @@ from PIL import Image, UnidentifiedImageError
 class ImageType(StrEnum):
     """`ImageType` class lists all classifiable types of images."""
 
-    BLOUSE = "bluzy"
-    TROUSERS = "bryuki"
+    BLOUSE = "blouse"
+    TROUSERS = "trousers"
 
     def __repr__(self):
         match self:
             case ImageType.BLOUSE:
-                return "blouse"
+                return "bluzy"
             case ImageType.TROUSERS:
-                return "trousers"
+                return "bryuki"
 
     @classmethod
-    def of_file(cls, file: str):
+    def from_repr(cls, repr_name: str):
+        """Constructs type of image from its dataset representation."""
+        
+        match repr_name:
+            case "bluzy":
+                return cls.BLOUSE
+            case "bryuki":
+                return cls.TROUSERS
+
+    @classmethod
+    def from_file(cls, file: str):
         """Extracts type of image from the file name."""
 
-        return cls(os.path.splitext(file)[0].split("_")[1].lower())
+        return cls.from_repr(os.path.splitext(file)[0].split("_")[1].lower())
 
     def label(self) -> int:
         """Returns label that is assigned to this image type."""
@@ -37,8 +47,8 @@ class ImageType(StrEnum):
                 return 1
     
     @classmethod
-    def of_label(cls, label: int):
-        """Extracts type of image from it's label."""
+    def from_label(cls, label: int):
+        """Extracts type of image from its label."""
 
         match label:
             case 0:
@@ -89,7 +99,7 @@ class DataFolder(StrEnum):
 
         if self == DataFolder.TEST:
             return None
-        return Counter([ImageType.of_file(file) for file in self.files()])
+        return Counter([ImageType.from_file(file) for file in self.files()])
 
     def image_sizes(self) -> Counter[(int, int)]:
         """Returns `Counter` of sizes of all images. This function does not handle cases where file is not an image."""
