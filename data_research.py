@@ -24,7 +24,7 @@ class ImageType(StrEnum):
     @classmethod
     def from_repr(cls, repr_name: str):
         """Constructs type of image from its dataset representation."""
-        
+
         match repr_name:
             case "bluzy":
                 return cls.BLOUSE
@@ -45,7 +45,7 @@ class ImageType(StrEnum):
                 return 0
             case ImageType.TROUSERS:
                 return 1
-    
+
     @classmethod
     def from_label(cls, label: int):
         """Extracts type of image from its label."""

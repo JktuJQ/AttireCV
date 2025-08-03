@@ -69,7 +69,8 @@ def main():
             print("Wrong input - there is no model with code " + str(model_id))
             continue
 
-        choice = int(input("Do you want to use pre-trained model ('1') or to train the model manually ('2')?\n"))
+        choice = int(input(
+            "Do you want to use model that was trained for 5 epochs ('1') or to train the model manually ('2')?\n"))
         if choice == 1:
             model = model.load()
         elif choice == 2:
