@@ -28,23 +28,18 @@ def submission(model, device):
 
             predictions.extend(map(lambda label: repr(ImageType.from_label(label)), prediction.cpu().numpy()))
     test_df = pd.DataFrame({
-        "index": datasets.TEST_DATASET.FILES,
+        "index": datasets.TEST_DATASET.files,
         "label": predictions
     })
     print(test_df)
     test_df.to_csv("submission/submission.csv", index=False)
 
 
-class ApplicationDataset(datasets.TestingDataset):
+class ApplicationDataset(datasets.Dataset):
     """`ApplicationDataset` performs transforms to images that user wants to classify beforehand."""
 
-    PATH = ""
-    FILES = []
-
     def __init__(self, path: str):
-        self.PATH = path
-        self.FILES = sorted(os.listdir(path))
-        super().__init__()
+        super().__init__(path, sorted(os.listdir(path)), datasets.TEST_TRANSFORM, lambda x: x)
 
 
 def main():
@@ -85,7 +80,7 @@ def main():
 
             metrics = model.fit_and_val(epochs, optimizer, lr_scheduler, loss_fn, datasets.FIT_DATALOADER,
                                         datasets.VAL_DATALOADER, device)
-            print(f"Metrics: ")
+            print("Metrics: ")
             print(metrics)
         else:
             print("Wrong input - there is no option with code " + str(choice))
@@ -109,7 +104,7 @@ def main():
 
             predictions.extend(map(lambda label: str(ImageType.from_label(label)), prediction.cpu().numpy()))
         df = pd.DataFrame({
-            "index": application_dataset.FILES,
+            "index": application_dataset.files,
             "label": predictions
         })
         print(df)

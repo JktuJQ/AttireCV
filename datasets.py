@@ -20,20 +20,19 @@ IMAGENET_MEAN_AND_STD = np.array([0.485, 0.456, 0.406]), np.array([0.229, 0.224,
 class Dataset(data.Dataset):
     """`Dataset` performs transforms to images beforehand."""
 
-    PATH = ""
-    FILES = []
-
-    def __init__(self, transform, label_maker):
+    def __init__(self, path: str, files: list[str], transform, label_maker):
         super().__init__()
+        self.path = path
+        self.files = files
         self.transform = transform
         self.label_maker = label_maker
 
     def __len__(self):
-        return len(self.FILES)
+        return len(self.files)
 
     def __getitem__(self, index):
-        file = self.FILES[index]
-        with Image.open(os.path.join(self.PATH, file)) as image:
+        file = self.files[index]
+        with Image.open(os.path.join(self.path, file)) as image:
             image = image.convert("RGB")
             image_tensor = self.transform(image)
         return image_tensor, self.label_maker(file)
@@ -64,11 +63,9 @@ VAL_TRANSFORM = transforms.Compose([
 class TrainingDataset(Dataset):
     """`TrainingDataset` performs transforms to training images beforehand."""
 
-    PATH = str(DataFolder.TRAIN)
-    FILES = DataFolder.TRAIN.files()
-
     def __init__(self, transform):
-        super().__init__(transform, lambda file: ImageType.from_file(file).label())
+        super().__init__(str(DataFolder.TRAIN), DataFolder.TRAIN.files(), transform,
+                         lambda file: ImageType.from_file(file).label())
 
     @staticmethod
     def split(fit_transform, val_transform, val_size: float) -> (Dataset, Dataset):
@@ -79,7 +76,7 @@ class TrainingDataset(Dataset):
         fit_indices, val_indices = train_test_split(
             list(range(len(dataset))),
             test_size=val_size,
-            stratify=[ImageType.from_file(file) for file in dataset.FILES],
+            stratify=[ImageType.from_file(file) for file in dataset.files],
             random_state=42
         )
 
@@ -116,11 +113,8 @@ TEST_TRANSFORM = transforms.Compose([
 class TestingDataset(Dataset):
     """`TestingDataset` performs transforms to testing images beforehand."""
 
-    PATH = str(DataFolder.TEST)
-    FILES = sorted(DataFolder.TEST.files())
-
     def __init__(self):
-        super().__init__(TEST_TRANSFORM, lambda x: x)
+        super().__init__(str(DataFolder.TEST), sorted(DataFolder.TEST.files()), TEST_TRANSFORM, lambda x: x)
 
 
 TEST_DATASET = TestingDataset()
@@ -154,4 +148,3 @@ if __name__ == "__main__":
 
     test_data = iter(TEST_DATALOADER)
     show_images(next(test_data)[0], denormalize=True)
-  

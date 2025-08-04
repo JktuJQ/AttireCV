@@ -108,8 +108,8 @@ As we can see, all models performed extremely well.
 
 I have tried to re-train models several times, and some of the times their results
 were comparably equal.
-But, nonetheless, `EfficientNetB0` was most commonly a winner,
-`ResNet18` was falling short of `ResNet34` which is due to more complex architecture.
+But, nonetheless, `EfficientNetB0` was most commonly a winner and
+`ResNet18` usually was falling short of `ResNet34` which is due to more complex architecture.
 
 ## Usage
 
